@@ -270,6 +270,16 @@ line:
 
 This is much the same concept as the SSH authorized_keys file.
 
+Individual user settings (i.e., Dvorak)
+---------------------------------------
+Each user creates a ~/.yubico/yubikey.dvorak file inside of their home
+directory. This file is never read, only checked for existance.
+If the file is present, the OTP string is converted from Dvorak to Qwerty 
+before sending the request to the server.
+
+This is should be the same concept as the SSH config file.
+TODO: rename to config, and read kb_layout option from there.
+
 
 Obtaining the Yubikey token ID (a.k.a. public ID)
 -------------------------------------------------
