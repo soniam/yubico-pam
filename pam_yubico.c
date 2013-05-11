@@ -102,6 +102,7 @@ struct cfg
   int verbose_otp;
   int try_first_pass;
   int use_first_pass;
+  int dvorak;
   char *auth_file;
   char *capath;
   char *url;
@@ -768,6 +769,9 @@ pam_sm_authenticate (pam_handle_t * pamh,
   const char *password = NULL;
   char otp[MAX_TOKEN_ID_LEN + TOKEN_OTP_LEN + 1] = { 0 };
   char otp_id[MAX_TOKEN_ID_LEN + 1] = { 0 };
+  // todo: remove from here?
+  char dvorak_otp[MAX_TOKEN_ID_LEN + TOKEN_OTP_LEN + 1] = { 0 };
+  char dvorak_otp_id[MAX_TOKEN_ID_LEN + 1] = { 0 };
   int password_len = 0;
   int skip_bytes = 0;
   int valid_token = 0;
@@ -778,6 +782,8 @@ pam_sm_authenticate (pam_handle_t * pamh,
   ykclient_t *ykc = NULL;
   struct cfg cfg_st;
   struct cfg *cfg = &cfg_st; /* for DBG macro */
+  int dvorak_support = 0;
+
 
   parse_cfg (flags, argc, argv, cfg);
 
@@ -788,6 +794,7 @@ pam_sm_authenticate (pam_handle_t * pamh,
     goto done;
   }
 
+
   retval = pam_get_user (pamh, &user, NULL);
   if (retval != PAM_SUCCESS)
     {
@@ -795,6 +802,18 @@ pam_sm_authenticate (pam_handle_t * pamh,
       goto done;
     }
   DBG (("get user returned: %s", user));
+
+  // have a user! can read user specific config
+  char* userfile = NULL;
+  if (get_user_cfgfile_path (NULL, "yubikey.dvorak", user, &userfile)) {
+    FILE* file = fopen(userfile, "r");
+    if (file != NULL){
+      fclose(file);
+      dvorak_support = 1;
+      DBG (( "Using dvorak, according to user's yubikey.dvorak"));
+    }
+  }
+
 
   if (cfg->mode == CHRESP) {
 #if HAVE_CR
@@ -923,8 +942,16 @@ pam_sm_authenticate (pam_handle_t * pamh,
 
   /* Copy full YubiKey output (public ID + OTP) into otp */
   strncpy (otp, password + skip_bytes, sizeof (otp) - 1);
+
   /* Copy only public ID into otp_id. Destination buffer is zeroed. */
   strncpy (otp_id, password + skip_bytes, cfg->token_id_length);
+
+  if (dvorak_support){
+    dvorak_to_qwerty(dvorak_otp, otp, strlen(otp));
+    dvorak_to_qwerty(dvorak_otp_id, otp_id, strlen(otp_id));
+    strcpy(otp, dvorak_otp);
+    strcpy(otp_id, dvorak_otp_id);    
+  }
 
   DBG (("OTP: %s ID: %s ", otp, otp_id));
 
@@ -992,6 +1019,7 @@ pam_sm_authenticate (pam_handle_t * pamh,
 done:
   if (ykc)
     ykclient_done (&ykc);
+
   if (cfg->alwaysok && retval != PAM_SUCCESS)
     {
       DBG (("alwaysok needed (otherwise return with %d)", retval));

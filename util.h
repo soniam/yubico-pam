@@ -92,6 +92,8 @@ int challenge_response(YK_KEY *yk, int slot,
 		       bool hmac, unsigned int flags, bool verbose,
 		       char *response, int res_size, unsigned int *res_len);
 
+void dvorak_to_qwerty(char* dst, char* src, size_t src_size);
+
 #endif /* HAVE_CR */
 
 #endif /* __PAM_YUBICO_UTIL_H_INCLUDED__ */

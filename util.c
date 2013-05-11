@@ -333,3 +333,38 @@ write_chalresp_state(FILE *f, CR_STATE *state)
   return 0;
 }
 #endif /* HAVE_CR */
+
+
+// char[dvorak_char] -> qwerty_char
+#define DVORAK_QWERTY_MAP "anihdyujgcvpmlsrxo;kf.,bt/"
+
+void dvorak_to_qwerty(char* dst, char* src, size_t src_size){
+  // translate to dvorak!
+  while (src_size--){
+    int index = *src - 'a';
+    if (index >= 0)
+      *dst = DVORAK_QWERTY_MAP[index];
+    else {
+      switch(index){
+      case -58:
+	*dst = 'q'; // '
+	break;
+      case -51:
+	*dst = 'e'; // .
+	break;
+      case -53:
+	*dst = 'w'; // ,
+	break;
+      case -38:
+	*dst = 'z'; // ;
+	break;
+      }
+      // no other options
+    }
+
+    *dst++;
+    *src++;
+  }
+  
+  *dst = '\0';
+}
